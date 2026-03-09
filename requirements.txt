@@ -1,0 +1,5 @@
+# Load .env for redirect_server, set_target, generate_qr
+python-dotenv>=1.0.0
+
+# Optional: only needed for generate_qr.py
+qrcode[pil]>=7.0
