@@ -72,10 +72,6 @@ export async function getRedirects(): Promise<RedirectEntry[]> {
 }
 
 function fallbackRedirects(): RedirectEntry[] {
-  const fromEnv = (process.env.REDIRECT_TARGET_URL ?? "").trim();
-  if (fromEnv && isSafeRedirectUrl(fromEnv)) {
-    return [{ slug: "default", targetUrl: fromEnv, name: "", note: "" }];
-  }
   return [];
 }
 

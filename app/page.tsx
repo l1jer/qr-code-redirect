@@ -27,6 +27,7 @@ export default function Home() {
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [previewSlug, setPreviewSlug] = useState<string | null>(null);
+  const [editingSlug, setEditingSlug] = useState<string | null>(null);
 
   const fetchSession = useCallback(async () => {
     try {
@@ -122,6 +123,7 @@ export default function Home() {
       setNewUrl("");
       setNewName("");
       setNewNote("");
+      setEditingSlug(null);
       await fetchSettings();
     } catch {
       setError("Request failed");
@@ -149,6 +151,25 @@ export default function Home() {
     } catch {
       setError("Request failed");
     }
+  };
+
+  const handleEdit = (entry: RedirectEntry) => {
+    setNewSlug(entry.slug);
+    setNewUrl(entry.targetUrl);
+    setNewName(entry.name);
+    setNewNote(entry.note);
+    setEditingSlug(entry.slug);
+    setError(null);
+    setMessage(null);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const handleCancelEdit = () => {
+    setNewSlug("");
+    setNewUrl("");
+    setNewName("");
+    setNewNote("");
+    setEditingSlug(null);
   };
 
   const downloadQr = async (slug: string) => {
@@ -255,9 +276,11 @@ export default function Home() {
         {/* Add link form */}
         {canEdit && (
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
-            <h2 className="text-sm font-semibold text-gray-900 mb-0.5">Add or update link</h2>
+            <h2 className="text-sm font-semibold text-gray-900 mb-0.5">
+              {editingSlug ? `Editing: ${editingSlug}` : "Add new link"}
+            </h2>
             <p className="text-xs text-gray-500 mb-4">
-              Use an existing slug to update its URL, name, or note.
+              {editingSlug ? "Change the URL, name, or note below." : "Create a new short link with its own QR code."}
             </p>
             <form onSubmit={handleAddLink} className="space-y-3">
               <div className="grid grid-cols-1 sm:grid-cols-[1fr_2fr] gap-3">
@@ -272,8 +295,10 @@ export default function Home() {
                     onChange={(e) => setNewSlug(e.target.value.replace(/[^a-zA-Z0-9_-]/g, ""))}
                     placeholder="e.g. ig"
                     maxLength={64}
-                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm
-                               focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent"
+                    readOnly={!!editingSlug}
+                    className={`w-full rounded-lg border border-gray-300 px-3 py-2 text-sm
+                               focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent
+                               ${editingSlug ? "bg-gray-100 text-gray-500 cursor-not-allowed" : ""}`}
                   />
                 </div>
                 <div>
@@ -323,15 +348,25 @@ export default function Home() {
                   />
                 </div>
               </div>
-              <div>
+              <div className="flex gap-2">
                 <button
                   type="submit"
                   disabled={saving || !newSlug.trim() || !newUrl.trim()}
                   className="rounded-lg bg-gray-900 px-5 py-2 text-sm font-medium text-white
                              hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 >
-                  {saving ? "Saving..." : "Save"}
+                  {saving ? "Saving..." : editingSlug ? "Update" : "Add"}
                 </button>
+                {editingSlug && (
+                  <button
+                    type="button"
+                    onClick={handleCancelEdit}
+                    className="rounded-lg bg-gray-100 px-5 py-2 text-sm font-medium text-gray-700
+                               hover:bg-gray-200 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                )}
               </div>
             </form>
           </div>
@@ -339,9 +374,7 @@ export default function Home() {
 
         {!canEdit && (
           <div className="rounded-lg bg-sky-50 border border-sky-200 px-4 py-3 text-sm text-sky-800">
-            Add Supabase to create or edit links from the UI. Until then, a single link from{" "}
-            <code className="bg-sky-100 px-1 rounded text-xs">REDIRECT_TARGET_URL</code> is shown
-            as &quot;default&quot;.
+            Add Supabase to create or edit links from the UI.
           </div>
         )}
 
@@ -426,6 +459,16 @@ export default function Home() {
                           >
                             Open
                           </a>
+                          {canEdit && (
+                            <button
+                              type="button"
+                              onClick={() => handleEdit(entry)}
+                              className="rounded-md bg-gray-100 px-3 py-1.5 text-xs font-medium text-gray-700
+                                         hover:bg-gray-200 transition-colors"
+                            >
+                              Edit
+                            </button>
+                          )}
                           {canEdit && (
                             <button
                               type="button"
