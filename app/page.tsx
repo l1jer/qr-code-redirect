@@ -3,7 +3,8 @@
 import { useCallback, useEffect, useState } from "react";
 
 type Session = { authenticated: boolean };
-type Settings = { redirects: Record<string, string>; canEdit: boolean };
+type RedirectEntry = { slug: string; targetUrl: string; name: string; note: string };
+type Settings = { redirects: RedirectEntry[]; canEdit: boolean };
 
 function fullRedirectUrl(slug: string): string {
   const base =
@@ -19,10 +20,13 @@ export default function Home() {
   const [code, setCode] = useState("");
   const [newSlug, setNewSlug] = useState("");
   const [newUrl, setNewUrl] = useState("");
+  const [newName, setNewName] = useState("");
+  const [newNote, setNewNote] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
+  const [previewSlug, setPreviewSlug] = useState<string | null>(null);
 
   const fetchSession = useCallback(async () => {
     try {
@@ -45,7 +49,7 @@ export default function Home() {
       }
       const data = await res.json();
       setSettings({
-        redirects: data.redirects ?? {},
+        redirects: Array.isArray(data.redirects) ? data.redirects : [],
         canEdit: data.canEdit === true,
       });
     } catch {
@@ -101,16 +105,23 @@ export default function Home() {
       const res = await fetch("/api/settings", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ slug: newSlug.trim(), targetUrl: newUrl.trim() }),
+        body: JSON.stringify({
+          slug: newSlug.trim(),
+          targetUrl: newUrl.trim(),
+          name: newName.trim(),
+          note: newNote.trim(),
+        }),
       });
       const data = await res.json();
       if (!res.ok) {
         setError(data.error ?? "Save failed");
         return;
       }
-      setMessage("Link added.");
+      setMessage("Link saved.");
       setNewSlug("");
       setNewUrl("");
+      setNewName("");
+      setNewNote("");
       await fetchSettings();
     } catch {
       setError("Request failed");
@@ -210,12 +221,13 @@ export default function Home() {
   }
 
   /* --- Dashboard --- */
-  const entries = settings ? Object.entries(settings.redirects) : [];
+  const entries = settings?.redirects ?? [];
   const canEdit = settings?.canEdit === true;
+  const previewEntry = entries.find((e) => e.slug === previewSlug);
 
   return (
     <div className="min-h-screen bg-gray-50 px-4 py-8">
-      <div className="max-w-4xl mx-auto space-y-6">
+      <div className="max-w-5xl mx-auto space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
           <h1 className="text-xl font-semibold text-gray-900">QR Redirect</h1>
@@ -245,46 +257,80 @@ export default function Home() {
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
             <h2 className="text-sm font-semibold text-gray-900 mb-0.5">Add or update link</h2>
             <p className="text-xs text-gray-500 mb-4">
-              Use an existing slug to change its redirect URL.
+              Use an existing slug to update its URL, name, or note.
             </p>
-            <form onSubmit={handleAddLink} className="flex flex-col sm:flex-row gap-3">
-              <div className="flex-1 min-w-0">
-                <label htmlFor="newSlug" className="block text-xs font-medium text-gray-600 mb-1">
-                  Slug
-                </label>
-                <input
-                  id="newSlug"
-                  type="text"
-                  value={newSlug}
-                  onChange={(e) => setNewSlug(e.target.value.replace(/[^a-zA-Z0-9_-]/g, ""))}
-                  placeholder="e.g. ig"
-                  maxLength={64}
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm
-                             focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent"
-                />
+            <form onSubmit={handleAddLink} className="space-y-3">
+              <div className="grid grid-cols-1 sm:grid-cols-[1fr_2fr] gap-3">
+                <div>
+                  <label htmlFor="newSlug" className="block text-xs font-medium text-gray-600 mb-1">
+                    Slug
+                  </label>
+                  <input
+                    id="newSlug"
+                    type="text"
+                    value={newSlug}
+                    onChange={(e) => setNewSlug(e.target.value.replace(/[^a-zA-Z0-9_-]/g, ""))}
+                    placeholder="e.g. ig"
+                    maxLength={64}
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm
+                               focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="newUrl" className="block text-xs font-medium text-gray-600 mb-1">
+                    Redirect URL
+                  </label>
+                  <input
+                    id="newUrl"
+                    type="url"
+                    value={newUrl}
+                    onChange={(e) => setNewUrl(e.target.value)}
+                    placeholder="https://..."
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm
+                               focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent"
+                  />
+                </div>
               </div>
-              <div className="flex-[2] min-w-0">
-                <label htmlFor="newUrl" className="block text-xs font-medium text-gray-600 mb-1">
-                  Redirect URL
-                </label>
-                <input
-                  id="newUrl"
-                  type="url"
-                  value={newUrl}
-                  onChange={(e) => setNewUrl(e.target.value)}
-                  placeholder="https://..."
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm
-                             focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent"
-                />
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label htmlFor="newName" className="block text-xs font-medium text-gray-600 mb-1">
+                    Name
+                  </label>
+                  <input
+                    id="newName"
+                    type="text"
+                    value={newName}
+                    onChange={(e) => setNewName(e.target.value)}
+                    placeholder="e.g. Instagram"
+                    maxLength={500}
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm
+                               focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="newNote" className="block text-xs font-medium text-gray-600 mb-1">
+                    Note
+                  </label>
+                  <input
+                    id="newNote"
+                    type="text"
+                    value={newNote}
+                    onChange={(e) => setNewNote(e.target.value)}
+                    placeholder="e.g. Printed on product box"
+                    maxLength={500}
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm
+                               focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent"
+                  />
+                </div>
               </div>
-              <div className="flex items-end">
+              <div>
                 <button
                   type="submit"
                   disabled={saving || !newSlug.trim() || !newUrl.trim()}
-                  className="rounded-lg bg-gray-900 px-5 py-2 text-sm font-medium text-white whitespace-nowrap
+                  className="rounded-lg bg-gray-900 px-5 py-2 text-sm font-medium text-white
                              hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 >
-                  {saving ? "Adding..." : "Add"}
+                  {saving ? "Saving..." : "Save"}
                 </button>
               </div>
             </form>
@@ -317,43 +363,62 @@ export default function Home() {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-5 py-3">QR</th>
                     <th className="px-5 py-3">Slug</th>
+                    <th className="px-5 py-3">Name</th>
                     <th className="px-5 py-3">Full URL</th>
                     <th className="px-5 py-3">Redirects to</th>
+                    <th className="px-5 py-3">Note</th>
                     <th className="px-5 py-3 text-right">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
-                  {entries.map(([slug, url]) => (
-                    <tr key={slug} className="hover:bg-gray-50 transition-colors">
+                  {entries.map((entry) => (
+                    <tr key={entry.slug} className="hover:bg-gray-50 transition-colors">
+                      <td className="px-5 py-3">
+                        <img
+                          src={"/api/qr?slug=" + encodeURIComponent(entry.slug)}
+                          alt={"QR " + entry.slug}
+                          width={48}
+                          height={48}
+                          className="rounded cursor-pointer hover:opacity-80 transition-opacity"
+                          onClick={() => setPreviewSlug(entry.slug)}
+                        />
+                      </td>
                       <td className="px-5 py-3 font-medium text-gray-900 whitespace-nowrap">
-                        {slug}
+                        {entry.slug}
+                      </td>
+                      <td className="px-5 py-3 text-gray-700 whitespace-nowrap">
+                        {entry.name || <span className="text-gray-300">--</span>}
                       </td>
                       <td className="px-5 py-3 whitespace-nowrap">
                         <a
-                          href={fullRedirectUrl(slug)}
+                          href={fullRedirectUrl(entry.slug)}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="text-indigo-600 hover:text-indigo-800 hover:underline"
                         >
-                          {fullRedirectUrl(slug)}
+                          {fullRedirectUrl(entry.slug)}
                         </a>
                       </td>
                       <td className="px-5 py-3 max-w-xs truncate text-gray-500">
                         <a
-                          href={url}
+                          href={entry.targetUrl}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="hover:text-gray-700 hover:underline"
-                          title={url}
+                          title={entry.targetUrl}
                         >
-                          {url}
+                          {entry.targetUrl}
                         </a>
+                      </td>
+                      <td className="px-5 py-3 max-w-[12rem] truncate text-gray-400 text-xs" title={entry.note}>
+                        {entry.note || <span className="text-gray-300">--</span>}
                       </td>
                       <td className="px-5 py-3 text-right whitespace-nowrap">
                         <div className="inline-flex items-center gap-2">
                           <a
-                            href={"/go/" + encodeURIComponent(slug)}
+                            href={"/go/" + encodeURIComponent(entry.slug)}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="rounded-md bg-gray-100 px-3 py-1.5 text-xs font-medium text-gray-700
@@ -361,18 +426,10 @@ export default function Home() {
                           >
                             Open
                           </a>
-                          <button
-                            type="button"
-                            onClick={() => downloadQr(slug)}
-                            className="rounded-md bg-gray-100 px-3 py-1.5 text-xs font-medium text-gray-700
-                                       hover:bg-gray-200 transition-colors"
-                          >
-                            QR
-                          </button>
                           {canEdit && (
                             <button
                               type="button"
-                              onClick={() => handleDelete(slug)}
+                              onClick={() => handleDelete(entry.slug)}
                               className="rounded-md bg-red-50 px-3 py-1.5 text-xs font-medium text-red-600
                                          hover:bg-red-100 transition-colors"
                             >
@@ -388,6 +445,50 @@ export default function Home() {
             </div>
           )}
         </div>
+
+        {/* QR Preview Modal */}
+        {previewSlug && previewEntry && (
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4"
+            onClick={() => setPreviewSlug(null)}
+          >
+            <div
+              className="bg-white rounded-xl shadow-xl max-w-sm w-full p-6 space-y-4"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-semibold text-gray-900">
+                  {previewEntry.name || previewEntry.slug}
+                </h3>
+                <button
+                  type="button"
+                  onClick={() => setPreviewSlug(null)}
+                  className="text-gray-400 hover:text-gray-600 text-lg leading-none"
+                >
+                  x
+                </button>
+              </div>
+              <img
+                src={"/api/qr?slug=" + encodeURIComponent(previewSlug)}
+                alt={"QR " + previewSlug}
+                className="mx-auto"
+                width={256}
+                height={256}
+              />
+              <p className="text-xs text-center text-gray-500 break-all">
+                {fullRedirectUrl(previewSlug)}
+              </p>
+              <button
+                type="button"
+                onClick={() => downloadQr(previewSlug)}
+                className="w-full rounded-lg bg-gray-900 px-4 py-2.5 text-sm font-medium text-white
+                           hover:bg-gray-800 transition-colors"
+              >
+                Download PNG
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

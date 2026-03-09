@@ -1,10 +1,18 @@
 /**
- * Multiple redirects by slug. Stored in Supabase table "redirects" (slug, target_url).
+ * Multiple redirects by slug. Stored in Supabase table "redirects" (slug, target_url, name, note).
  * When Supabase is not configured, a single env REDIRECT_TARGET_URL is exposed as slug "default" (read-only).
  */
 
 const ALLOWED = /^https?:\/\//i;
 const SLUG_REGEX = /^[a-zA-Z0-9_-]{1,64}$/;
+const MAX_TEXT = 500;
+
+export interface RedirectEntry {
+  slug: string;
+  targetUrl: string;
+  name: string;
+  note: string;
+}
 
 export function isSafeRedirectUrl(url: string): boolean {
   return typeof url === "string" && url.length > 0 && ALLOWED.test(url.trim());
@@ -25,26 +33,35 @@ export function isStorageConfigured(): boolean {
   return Boolean(url && key);
 }
 
-/** Get target URL for one slug. */
+/** Get target URL for one slug (used by public /go/[slug]). */
 export async function getRedirectTarget(slug: string): Promise<string | null> {
-  const redirects = await getRedirects();
-  const url = (redirects[slug] ?? "").trim();
-  return isSafeRedirectUrl(url) ? url : null;
+  const all = await getRedirects();
+  const entry = all.find((e) => e.slug === slug);
+  return entry && isSafeRedirectUrl(entry.targetUrl) ? entry.targetUrl : null;
 }
 
-/** List all slug -> url. When no Supabase, returns { default: REDIRECT_TARGET_URL } if set. */
-export async function getRedirects(): Promise<Record<string, string>> {
+/** List all redirect entries. */
+export async function getRedirects(): Promise<RedirectEntry[]> {
   if (isStorageConfigured()) {
     const supabase = (await import("@/lib/supabase")).getSupabase();
     if (!supabase) return fallbackRedirects();
     try {
-      const { data, error } = await supabase.from("redirects").select("slug, target_url");
+      const { data, error } = await supabase
+        .from("redirects")
+        .select("slug, target_url, name, note")
+        .order("slug");
       if (error) throw error;
-      const out: Record<string, string> = {};
+      const out: RedirectEntry[] = [];
       for (const row of data ?? []) {
-        const k = (row as { slug: string; target_url: string }).slug;
-        const v = (row as { slug: string; target_url: string }).target_url;
-        if (isValidSlug(k) && isSafeRedirectUrl(String(v).trim())) out[k] = String(v).trim();
+        const r = row as { slug: string; target_url: string; name?: string; note?: string };
+        if (isValidSlug(r.slug) && isSafeRedirectUrl(String(r.target_url).trim())) {
+          out.push({
+            slug: r.slug,
+            targetUrl: String(r.target_url).trim(),
+            name: String(r.name ?? "").slice(0, MAX_TEXT),
+            note: String(r.note ?? "").slice(0, MAX_TEXT),
+          });
+        }
       }
       return out;
     } catch {
@@ -54,24 +71,26 @@ export async function getRedirects(): Promise<Record<string, string>> {
   return fallbackRedirects();
 }
 
-function fallbackRedirects(): Record<string, string> {
+function fallbackRedirects(): RedirectEntry[] {
   const fromEnv = (process.env.REDIRECT_TARGET_URL ?? "").trim();
   if (fromEnv && isSafeRedirectUrl(fromEnv)) {
-    return { default: fromEnv };
+    return [{ slug: "default", targetUrl: fromEnv, name: "", note: "" }];
   }
-  return {};
+  return [];
 }
 
 /** Add or update one redirect. Requires Supabase. */
 export async function setRedirectTarget(
   slug: string,
-  url: string
+  url: string,
+  name: string,
+  note: string
 ): Promise<{ ok: boolean; error?: string }> {
   if (!isValidSlug(slug)) {
-    return { ok: false, error: "Slug must be 1–64 characters, letters, numbers, hyphen, underscore only." };
+    return { ok: false, error: "Slug must be 1-64 characters, letters, numbers, hyphen, underscore only." };
   }
-  const trimmed = (url ?? "").trim();
-  if (!isSafeRedirectUrl(trimmed)) {
+  const trimmedUrl = (url ?? "").trim();
+  if (!isSafeRedirectUrl(trimmedUrl)) {
     return { ok: false, error: "URL must start with http:// or https://" };
   }
 
@@ -82,7 +101,12 @@ export async function setRedirectTarget(
 
   try {
     const { error } = await supabase.from("redirects").upsert(
-      { slug, target_url: trimmed },
+      {
+        slug,
+        target_url: trimmedUrl,
+        name: (name ?? "").slice(0, MAX_TEXT),
+        note: (note ?? "").slice(0, MAX_TEXT),
+      },
       { onConflict: "slug" }
     );
     if (error) throw error;

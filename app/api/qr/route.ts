@@ -3,7 +3,7 @@
  * Slug is required so each link has its own QR.
  */
 
-import { getRedirects } from "@/lib/kv";
+import { getRedirectTarget } from "@/lib/kv";
 import QRCode from "qrcode";
 import { NextRequest, NextResponse } from "next/server";
 
@@ -13,8 +13,8 @@ export async function GET(request: NextRequest) {
     return new NextResponse("Missing slug", { status: 400 });
   }
 
-  const redirects = await getRedirects();
-  if (!redirects[slug]) {
+  const target = await getRedirectTarget(slug);
+  if (!target) {
     return new NextResponse("Not found", { status: 404 });
   }
 

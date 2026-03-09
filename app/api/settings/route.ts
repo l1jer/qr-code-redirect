@@ -1,7 +1,7 @@
 /**
- * GET: list all redirects (slug -> url) and canEdit. Protected.
- * POST: add/update one redirect { slug, targetUrl }. Protected; requires KV.
- * DELETE: remove one redirect (body { slug }). Protected; requires KV.
+ * GET: list all redirects and canEdit. Protected.
+ * POST: add/update one redirect { slug, targetUrl, name?, note? }. Protected; requires Supabase.
+ * DELETE: remove one redirect { slug }. Protected; requires Supabase.
  */
 
 import {
@@ -44,7 +44,7 @@ export async function POST(request: Request) {
     );
   }
 
-  let body: { slug?: string; targetUrl?: string };
+  let body: { slug?: string; targetUrl?: string; name?: string; note?: string };
   try {
     body = await request.json();
   } catch {
@@ -57,7 +57,10 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "slug and targetUrl are required" }, { status: 400 });
   }
 
-  const result = await setRedirectTarget(slug, targetUrl);
+  const name = (body?.name ?? "").trim();
+  const note = (body?.note ?? "").trim();
+
+  const result = await setRedirectTarget(slug, targetUrl, name, note);
   if (!result.ok) {
     return NextResponse.json({ error: result.error ?? "Failed to save" }, { status: 400 });
   }
