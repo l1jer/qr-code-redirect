@@ -1,0 +1,29 @@
+{
+  "name": "qr-code-redirect",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "totp-setup": "tsx scripts/totp-setup.ts"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.47.0",
+    "iron-session": "^8.0.2",
+    "next": "14.2.18",
+    "otplib": "^13.0.0",
+    "qrcode": "^1.5.4",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@types/qrcode": "^1.5.5",
+    "@types/node": "^22.9.0",
+    "@types/react": "^18.3.12",
+    "@types/react-dom": "^18.3.1",
+    "tsx": "^4.19.2",
+    "typescript": "^5.6.3"
+  }
+}
