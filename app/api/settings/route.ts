@@ -10,6 +10,7 @@ import {
   isStorageConfigured,
   setRedirectTarget,
 } from "@/lib/kv";
+import { getScanCounts } from "@/lib/analytics";
 import { getSession, isSessionValid } from "@/lib/session";
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
@@ -26,10 +27,14 @@ export async function GET() {
   const authError = await requireAuth();
   if (authError) return authError;
 
-  const redirects = await getRedirects();
+  const [redirects, scanCounts] = await Promise.all([
+    getRedirects(),
+    getScanCounts(),
+  ]);
   return NextResponse.json({
     redirects,
     canEdit: isStorageConfigured(),
+    scanCounts,
   });
 }
 
@@ -55,6 +60,9 @@ export async function POST(request: Request) {
   const targetUrl = (body?.targetUrl ?? "").trim();
   if (!slug || !targetUrl) {
     return NextResponse.json({ error: "slug and targetUrl are required" }, { status: 400 });
+  }
+  if (slug.length > 10) {
+    return NextResponse.json({ error: "slug must be 10 characters or fewer" }, { status: 400 });
   }
 
   const name = (body?.name ?? "").trim();

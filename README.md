@@ -39,6 +39,38 @@ Multiple short links: each has a **slug** (e.g. `ig`, `shop`) and a **redirect U
 - Short URL: `https://your-app.vercel.app/go/ig` redirects to the URL you set for `ig`.
 - In the admin UI: **Add or update link** (slug + redirect URL). Same slug again updates the URL. Each row has **Open**, **QR** (download PNG), and **Delete**.
 
+## Scan analytics
+
+Every time someone scans a QR code (visits `/go/[slug]`), the app logs the scan to a separate `scan_logs` table in Supabase. Data collected per scan:
+
+- **Timestamp**
+- **IP address** (from `x-forwarded-for`)
+- **Country** (from Vercel's `x-vercel-ip-country` header -- works automatically on Vercel)
+- **User-Agent** (device / browser / OS)
+- **Referer**
+
+The admin dashboard shows:
+- A **scan count** column in the links table.
+- Click on a QR thumbnail to open the preview modal, which includes **total / 24h / 7d** counters and a list of the **20 most recent scans** with device and location details.
+
+To enable analytics, run this migration in Supabase SQL Editor:
+
+```sql
+create table if not exists public.scan_logs (
+  id bigint generated always as identity primary key,
+  slug text not null,
+  scanned_at timestamptz not null default now(),
+  ip text,
+  user_agent text,
+  referer text,
+  country text
+);
+create index if not exists idx_scan_logs_slug on public.scan_logs (slug);
+create index if not exists idx_scan_logs_scanned_at on public.scan_logs (scanned_at);
+```
+
+Analytics is optional; if the table does not exist, scans are silently not logged and the counters show 0.
+
 ## TOTP setup
 
 Run once to generate a TOTP secret:
