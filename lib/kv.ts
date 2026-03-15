@@ -1,10 +1,11 @@
 /**
- * Multiple redirects by slug. Stored in Supabase table "redirects" (slug, target_url, name, note).
- * When Supabase is not configured, a single env REDIRECT_TARGET_URL is exposed as slug "default" (read-only).
+ * Multiple redirects by slug, stored in MongoDB collection "redirects".
  */
 
+import { ensureMongoIndexes, getDb, isMongoConfigured } from "@/lib/mongodb";
+
 const ALLOWED = /^https?:\/\//i;
-const SLUG_REGEX = /^[a-zA-Z0-9_-]{1,64}$/;
+const SLUG_REGEX = /^[a-zA-Z0-9_-]{1,10}$/;
 const MAX_TEXT = 500;
 
 export interface RedirectEntry {
@@ -12,6 +13,13 @@ export interface RedirectEntry {
   targetUrl: string;
   name: string;
   note: string;
+}
+
+interface RedirectDoc {
+  slug: string;
+  target_url: string;
+  name?: string;
+  note?: string;
 }
 
 export function isSafeRedirectUrl(url: string): boolean {
@@ -23,14 +31,7 @@ export function isValidSlug(slug: string): boolean {
 }
 
 export function isStorageConfigured(): boolean {
-  const prefix = (process.env.SUPABASE_ENV_PREFIX ?? "").trim();
-  const url = prefix
-    ? process.env[`${prefix}_SUPABASE_URL`]
-    : process.env.SUPABASE_URL;
-  const key = prefix
-    ? process.env[`${prefix}_SUPABASE_SERVICE_ROLE_KEY`]
-    : process.env.SUPABASE_SERVICE_ROLE_KEY;
-  return Boolean(url && key);
+  return isMongoConfigured();
 }
 
 /** Get target URL for one slug (used by public /go/[slug]). */
@@ -43,23 +44,34 @@ export async function getRedirectTarget(slug: string): Promise<string | null> {
 /** List all redirect entries. */
 export async function getRedirects(): Promise<RedirectEntry[]> {
   if (isStorageConfigured()) {
-    const supabase = (await import("@/lib/supabase")).getSupabase();
-    if (!supabase) return fallbackRedirects();
     try {
-      const { data, error } = await supabase
-        .from("redirects")
-        .select("slug, target_url, name, note")
-        .order("slug");
-      if (error) throw error;
+      await ensureMongoIndexes();
+      const db = await getDb();
+      const rows = await db
+        .collection<RedirectDoc>("redirects")
+        .find(
+          {},
+          {
+            projection: {
+              _id: 0,
+              slug: 1,
+              target_url: 1,
+              name: 1,
+              note: 1,
+            },
+          }
+        )
+        .sort({ slug: 1 })
+        .toArray();
+
       const out: RedirectEntry[] = [];
-      for (const row of data ?? []) {
-        const r = row as { slug: string; target_url: string; name?: string; note?: string };
-        if (isValidSlug(r.slug) && isSafeRedirectUrl(String(r.target_url).trim())) {
+      for (const row of rows) {
+        if (isValidSlug(row.slug) && isSafeRedirectUrl(String(row.target_url).trim())) {
           out.push({
-            slug: r.slug,
-            targetUrl: String(r.target_url).trim(),
-            name: String(r.name ?? "").slice(0, MAX_TEXT),
-            note: String(r.note ?? "").slice(0, MAX_TEXT),
+            slug: row.slug,
+            targetUrl: String(row.target_url).trim(),
+            name: String(row.name ?? "").slice(0, MAX_TEXT),
+            note: String(row.note ?? "").slice(0, MAX_TEXT),
           });
         }
       }
@@ -75,7 +87,7 @@ function fallbackRedirects(): RedirectEntry[] {
   return [];
 }
 
-/** Add or update one redirect. Requires Supabase. */
+/** Add or update one redirect. Requires MongoDB. */
 export async function setRedirectTarget(
   slug: string,
   url: string,
@@ -83,53 +95,55 @@ export async function setRedirectTarget(
   note: string
 ): Promise<{ ok: boolean; error?: string }> {
   if (!isValidSlug(slug)) {
-    return { ok: false, error: "Slug must be 1-64 characters, letters, numbers, hyphen, underscore only." };
+    return { ok: false, error: "Slug must be 1-10 characters, letters, numbers, hyphen, underscore only." };
   }
   const trimmedUrl = (url ?? "").trim();
   if (!isSafeRedirectUrl(trimmedUrl)) {
     return { ok: false, error: "URL must start with http:// or https://" };
   }
 
-  const supabase = (await import("@/lib/supabase")).getSupabase();
-  if (!supabase) {
-    return { ok: false, error: "Supabase not configured" };
+  if (!isMongoConfigured()) {
+    return { ok: false, error: "MongoDB not configured" };
   }
 
   try {
-    const { error } = await supabase.from("redirects").upsert(
+    await ensureMongoIndexes();
+    const db = await getDb();
+    await db.collection("redirects").updateOne(
+      { slug },
       {
-        slug,
-        target_url: trimmedUrl,
-        name: (name ?? "").slice(0, MAX_TEXT),
-        note: (note ?? "").slice(0, MAX_TEXT),
+        $set: {
+          target_url: trimmedUrl,
+          name: (name ?? "").slice(0, MAX_TEXT),
+          note: (note ?? "").slice(0, MAX_TEXT),
+        },
       },
-      { onConflict: "slug" }
+      { upsert: true }
     );
-    if (error) throw error;
     return { ok: true };
   } catch (e) {
-    const msg = e instanceof Error ? e.message : "Supabase write failed";
+    const msg = e instanceof Error ? e.message : "MongoDB write failed";
     return { ok: false, error: msg };
   }
 }
 
-/** Remove one redirect. Requires Supabase. */
+/** Remove one redirect. Requires MongoDB. */
 export async function deleteRedirect(slug: string): Promise<{ ok: boolean; error?: string }> {
   if (!isValidSlug(slug)) {
     return { ok: false, error: "Invalid slug." };
   }
 
-  const supabase = (await import("@/lib/supabase")).getSupabase();
-  if (!supabase) {
-    return { ok: false, error: "Supabase not configured" };
+  if (!isMongoConfigured()) {
+    return { ok: false, error: "MongoDB not configured" };
   }
 
   try {
-    const { error } = await supabase.from("redirects").delete().eq("slug", slug);
-    if (error) throw error;
+    await ensureMongoIndexes();
+    const db = await getDb();
+    await db.collection("redirects").deleteOne({ slug });
     return { ok: true };
   } catch (e) {
-    const msg = e instanceof Error ? e.message : "Supabase delete failed";
+    const msg = e instanceof Error ? e.message : "MongoDB delete failed";
     return { ok: false, error: msg };
   }
 }

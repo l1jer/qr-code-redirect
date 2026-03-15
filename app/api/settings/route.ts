@@ -1,7 +1,7 @@
 /**
  * GET: list all redirects and canEdit. Protected.
- * POST: add/update one redirect { slug, targetUrl, name?, note? }. Protected; requires Supabase.
- * DELETE: remove one redirect { slug }. Protected; requires Supabase.
+ * POST: add/update one redirect { slug, targetUrl, name?, note? }. Protected; requires MongoDB.
+ * DELETE: remove one redirect { slug }. Protected; requires MongoDB.
  */
 
 import {
@@ -44,7 +44,7 @@ export async function POST(request: Request) {
 
   if (!isStorageConfigured()) {
     return NextResponse.json(
-      { error: "Add Supabase (SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY) to create or edit links from the UI." },
+      { error: "Add MongoDB (MONGODB_URI and MONGODB_DB) to create or edit links from the UI." },
       { status: 501 }
     );
   }
@@ -81,7 +81,7 @@ export async function DELETE(request: Request) {
 
   if (!isStorageConfigured()) {
     return NextResponse.json(
-      { error: "Add Supabase to delete links from the UI." },
+      { error: "Add MongoDB to delete links from the UI." },
       { status: 501 }
     );
   }

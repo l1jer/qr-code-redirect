@@ -429,7 +429,7 @@ export default function Home() {
 
         {!canEdit && (
           <div className="rounded-lg bg-sky-900/30 border border-sky-800 px-4 py-3 text-sm text-sky-300">
-            Add Supabase to create or edit links from the UI. / 请接入 Supabase 以在界面中创建或编辑链接。
+            Add MongoDB to create or edit links from the UI. / 请接入 MongoDB 以在界面中创建或编辑链接。
           </div>
         )}
 
@@ -444,7 +444,7 @@ export default function Home() {
 
           {entries.length === 0 ? (
             <div className="px-5 py-8 text-center text-sm text-stone-500">
-              No links yet. / 暂无链接。{canEdit ? " Add one above. / 请在上方添加。" : " Connect Supabase to get started. / 请接入 Supabase 开始使用。"}
+              No links yet. / 暂无链接。{canEdit ? " Add one above. / 请在上方添加。" : " Connect MongoDB to get started. / 请接入 MongoDB 开始使用。"}
             </div>
           ) : (
             <>

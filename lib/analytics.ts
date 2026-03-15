@@ -1,9 +1,9 @@
 /**
  * Scan analytics: log each redirect hit and query stats.
- * Uses a separate scan_logs table; does not touch redirects.
+ * Uses MongoDB collection "scan_logs"; does not touch redirects.
  */
 
-import { isSupabaseConfigured } from "@/lib/supabase";
+import { ensureMongoIndexes, getDb, isMongoConfigured } from "@/lib/mongodb";
 
 export interface ScanLogInput {
   slug: string;
@@ -59,13 +59,13 @@ function topN<T extends string>(
 
 /** Fire-and-forget: insert a scan log row. Does not block the redirect. */
 export async function logScan(input: ScanLogInput): Promise<void> {
-  if (!isSupabaseConfigured()) return;
+  if (!isMongoConfigured()) return;
   try {
-    const { getSupabase } = await import("@/lib/supabase");
-    const supabase = getSupabase();
-    if (!supabase) return;
-    await supabase.from("scan_logs").insert({
+    await ensureMongoIndexes();
+    const db = await getDb();
+    await db.collection("scan_logs").insertOne({
       slug: input.slug,
+      scanned_at: new Date(),
       ip: input.ip ?? null,
       user_agent: input.userAgent ?? null,
       referer: input.referer ?? null,
@@ -78,31 +78,20 @@ export async function logScan(input: ScanLogInput): Promise<void> {
 
 /** Get scan counts per slug (total). */
 export async function getScanCounts(): Promise<Record<string, number>> {
-  if (!isSupabaseConfigured()) return {};
+  if (!isMongoConfigured()) return {};
   try {
-    const { getSupabase } = await import("@/lib/supabase");
-    const supabase = getSupabase();
-    if (!supabase) return {};
-
-    const { data, error } = await supabase
-      .rpc("scan_counts_by_slug");
-
-    if (error || !data) {
-      // Fallback: manual count if RPC not available
-      const { data: raw, error: rawErr } = await supabase
-        .from("scan_logs")
-        .select("slug");
-      if (rawErr || !raw) return {};
-      const counts: Record<string, number> = {};
-      for (const row of raw) {
-        counts[row.slug] = (counts[row.slug] ?? 0) + 1;
-      }
-      return counts;
-    }
-
+    await ensureMongoIndexes();
+    const db = await getDb();
+    const grouped = await db
+      .collection("scan_logs")
+      .aggregate<{ _id: string; count: number }>([
+        { $group: { _id: "$slug", count: { $sum: 1 } } },
+      ])
+      .toArray();
     const counts: Record<string, number> = {};
-    for (const row of data as { slug: string; count: number }[]) {
-      counts[row.slug] = Number(row.count);
+    for (const row of grouped) {
+      if (!row._id) continue;
+      counts[row._id] = Number(row.count);
     }
     return counts;
   } catch {
@@ -118,37 +107,48 @@ const EMPTY_STATS: SlugStats = {
 
 /** Get detailed stats for one slug. */
 export async function getSlugStats(slug: string): Promise<SlugStats> {
-  if (!isSupabaseConfigured()) return EMPTY_STATS;
+  if (!isMongoConfigured()) return EMPTY_STATS;
 
   try {
-    const { getSupabase } = await import("@/lib/supabase");
-    const supabase = getSupabase();
-    if (!supabase) return EMPTY_STATS;
+    await ensureMongoIndexes();
+    const db = await getDb();
+    const scanLogs = db.collection("scan_logs");
 
     const now = new Date();
-    const h24 = new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString();
-    const d7 = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString();
-    const d30 = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString();
+    const h24 = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+    const d7 = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+    const d30 = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
 
-    const [totalRes, h24Res, d7Res, d30Res, allRows, recentRes] = await Promise.all([
-      supabase.from("scan_logs").select("id", { count: "exact", head: true }).eq("slug", slug),
-      supabase.from("scan_logs").select("id", { count: "exact", head: true }).eq("slug", slug).gte("scanned_at", h24),
-      supabase.from("scan_logs").select("id", { count: "exact", head: true }).eq("slug", slug).gte("scanned_at", d7),
-      supabase.from("scan_logs").select("id", { count: "exact", head: true }).eq("slug", slug).gte("scanned_at", d30),
-      supabase.from("scan_logs")
-        .select("scanned_at, ip, user_agent, referer, country")
-        .eq("slug", slug)
-        .gte("scanned_at", d30)
-        .order("scanned_at", { ascending: false })
-        .limit(5000),
-      supabase.from("scan_logs")
-        .select("scanned_at, ip, user_agent, referer, country")
-        .eq("slug", slug)
-        .order("scanned_at", { ascending: false })
-        .limit(50),
+    const [totalScans, last24h, last7d, last30d, allRows, recentRows] = await Promise.all([
+      scanLogs.countDocuments({ slug }),
+      scanLogs.countDocuments({ slug, scanned_at: { $gte: h24 } }),
+      scanLogs.countDocuments({ slug, scanned_at: { $gte: d7 } }),
+      scanLogs.countDocuments({ slug, scanned_at: { $gte: d30 } }),
+      scanLogs
+        .find(
+          { slug, scanned_at: { $gte: d30 } },
+          { projection: { _id: 0, scanned_at: 1, ip: 1, user_agent: 1, referer: 1, country: 1 } }
+        )
+        .sort({ scanned_at: -1 })
+        .limit(5000)
+        .toArray(),
+      scanLogs
+        .find(
+          { slug },
+          { projection: { _id: 0, scanned_at: 1, ip: 1, user_agent: 1, referer: 1, country: 1 } }
+        )
+        .sort({ scanned_at: -1 })
+        .limit(50)
+        .toArray(),
     ]);
 
-    const rows = allRows.data ?? [];
+    const rows = allRows.map((r) => ({
+      scanned_at: toIsoDate(r.scanned_at),
+      ip: toOptionalString(r.ip),
+      user_agent: toOptionalString(r.user_agent),
+      referer: toOptionalString(r.referer),
+      country: toOptionalString(r.country),
+    }));
 
     // Unique IPs
     const ipSet = new Set<string>();
@@ -185,24 +185,39 @@ export async function getSlugStats(slug: string): Promise<SlugStats> {
     const dailyTrend = [...dayCounts.entries()].map(([date, count]) => ({ date, count }));
 
     return {
-      totalScans: totalRes.count ?? 0,
-      last24h: h24Res.count ?? 0,
-      last7d: d7Res.count ?? 0,
-      last30d: d30Res.count ?? 0,
+      totalScans,
+      last24h,
+      last7d,
+      last30d,
       uniqueIPs: ipSet.size,
       topCountries: countries.map((c) => ({ code: c.value, count: c.count })),
       topDevices: devices.map((d) => ({ device: d.value, count: d.count })),
       topReferers: referers.map((r) => ({ referer: r.value, count: r.count })),
       dailyTrend,
-      recentScans: (recentRes.data ?? []).map((r) => ({
-        scannedAt: r.scanned_at,
-        ip: r.ip ?? undefined,
-        userAgent: r.user_agent ?? undefined,
-        referer: r.referer ?? undefined,
-        country: r.country ?? undefined,
+      recentScans: recentRows.map((r) => ({
+        scannedAt: toIsoDate(r.scanned_at),
+        ip: toOptionalString(r.ip),
+        userAgent: toOptionalString(r.user_agent),
+        referer: toOptionalString(r.referer),
+        country: toOptionalString(r.country),
       })),
     };
   } catch {
     return EMPTY_STATS;
   }
+}
+
+function toIsoDate(value: unknown): string {
+  if (value instanceof Date) return value.toISOString();
+  if (typeof value === "string") {
+    const d = new Date(value);
+    if (!Number.isNaN(d.getTime())) return d.toISOString();
+  }
+  return new Date(0).toISOString();
+}
+
+function toOptionalString(value: unknown): string | undefined {
+  if (typeof value !== "string") return undefined;
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : undefined;
 }

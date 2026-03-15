@@ -1,5 +1,5 @@
 /**
- * Server-side Supabase client for redirects storage.
+ * Supabase client helper used by migration tooling.
  * Reads SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY, or when SUPABASE_ENV_PREFIX
  * is set (e.g. QRC for Vercel one-click integration), reads PREFIX_SUPABASE_URL
  * and PREFIX_SUPABASE_SERVICE_ROLE_KEY.
