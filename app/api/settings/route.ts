@@ -49,7 +49,7 @@ export async function POST(request: Request) {
     );
   }
 
-  let body: { slug?: string; targetUrl?: string; name?: string; note?: string };
+  let body: { slug?: string; targetUrl?: string; name?: string; note?: string; qrIcon?: string };
   try {
     body = await request.json();
   } catch {
@@ -67,8 +67,9 @@ export async function POST(request: Request) {
 
   const name = (body?.name ?? "").trim();
   const note = (body?.note ?? "").trim();
+  const qrIcon = (body?.qrIcon ?? "").trim();
 
-  const result = await setRedirectTarget(slug, targetUrl, name, note);
+  const result = await setRedirectTarget(slug, targetUrl, name, note, qrIcon);
   if (!result.ok) {
     return NextResponse.json({ error: result.error ?? "Failed to save" }, { status: 400 });
   }

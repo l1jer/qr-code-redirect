@@ -1,9 +1,10 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { QR_ICONS } from "@/lib/qr-icons";
 
 type Session = { authenticated: boolean };
-type RedirectEntry = { slug: string; targetUrl: string; name: string; note: string };
+type RedirectEntry = { slug: string; targetUrl: string; name: string; note: string; qrIcon: string };
 type Settings = { redirects: RedirectEntry[]; canEdit: boolean; scanCounts: Record<string, number> };
 type SlugStats = {
   totalScans: number;
@@ -38,6 +39,12 @@ function fullRedirectUrl(slug: string): string {
   return base.replace(/\/+$/, "") + "/go/" + encodeURIComponent(slug);
 }
 
+function qrImgUrl(slug: string, icon?: string): string {
+  const params = new URLSearchParams({ slug });
+  if (icon && icon !== "logo") params.set("icon", icon);
+  return "/api/qr?" + params.toString();
+}
+
 export default function Home() {
   const [session, setSession] = useState<Session | null>(null);
   const [settings, setSettings] = useState<Settings | null>(null);
@@ -46,6 +53,7 @@ export default function Home() {
   const [newUrl, setNewUrl] = useState("");
   const [newName, setNewName] = useState("");
   const [newNote, setNewNote] = useState("");
+  const [newQrIcon, setNewQrIcon] = useState("logo");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -138,6 +146,7 @@ export default function Home() {
           targetUrl: newUrl.trim(),
           name: newName.trim(),
           note: newNote.trim(),
+          qrIcon: newQrIcon,
         }),
       });
       const data = await res.json();
@@ -150,6 +159,7 @@ export default function Home() {
       setNewUrl("");
       setNewName("");
       setNewNote("");
+      setNewQrIcon("logo");
       setEditingSlug(null);
       await fetchSettings();
     } catch {
@@ -185,6 +195,7 @@ export default function Home() {
     setNewUrl(entry.targetUrl);
     setNewName(entry.name);
     setNewNote(entry.note);
+    setNewQrIcon(entry.qrIcon || "logo");
     setEditingSlug(entry.slug);
     setError(null);
     setMessage(null);
@@ -196,6 +207,7 @@ export default function Home() {
     setNewUrl("");
     setNewName("");
     setNewNote("");
+    setNewQrIcon("logo");
     setEditingSlug(null);
   };
 
@@ -223,7 +235,8 @@ export default function Home() {
 
   const downloadQr = async (slug: string) => {
     try {
-      const res = await fetch("/api/qr?slug=" + encodeURIComponent(slug));
+      const entry = settings?.redirects?.find((e) => e.slug === slug);
+      const res = await fetch(qrImgUrl(slug, entry?.qrIcon));
       if (!res.ok) return;
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
@@ -405,6 +418,40 @@ export default function Home() {
                   />
                 </div>
               </div>
+              {/* QR icon selector */}
+              <div>
+                <label className="block text-xs font-medium text-stone-400 mb-1.5">
+                  QR Icon / 二维码图标
+                </label>
+                <div className="flex flex-wrap gap-2">
+                  {QR_ICONS.map((icon) => (
+                    <button
+                      key={icon.id}
+                      type="button"
+                      onClick={() => setNewQrIcon(icon.id)}
+                      className={`flex flex-col items-center justify-center w-16 py-2 rounded-lg transition-colors border
+                        ${newQrIcon === icon.id
+                          ? "border-teal-500 bg-teal-900/40"
+                          : "border-stone-600 bg-stone-700 hover:border-stone-500"
+                        }`}
+                    >
+                      {icon.svg ? (
+                        <span
+                          className="w-6 h-6 flex items-center justify-center"
+                          dangerouslySetInnerHTML={{ __html: icon.svg }}
+                        />
+                      ) : icon.id === "logo" ? (
+                        <img src="/flywing-icon.png" alt="Logo" className="w-6 h-6 rounded" />
+                      ) : (
+                        <span className="w-6 h-6 flex items-center justify-center text-stone-500 text-lg leading-none">&times;</span>
+                      )}
+                      <span className={`text-[10px] mt-1 leading-tight text-center whitespace-pre-line ${newQrIcon === icon.id ? "text-teal-300" : "text-stone-400"}`}>
+                        {icon.id === "wechat" ? "WeChat\n微信" : icon.label}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </div>
               <div className="flex gap-2">
                 <button
                   type="submit"
@@ -468,7 +515,7 @@ export default function Home() {
                       <tr key={entry.slug} className="hover:bg-white/5 transition-colors">
                         <td className="px-3 py-3">
                           <img
-                            src={"/api/qr?slug=" + encodeURIComponent(entry.slug)}
+                            src={qrImgUrl(entry.slug, entry.qrIcon)}
                             alt={"QR " + entry.slug}
                             width={40}
                             height={40}
@@ -567,7 +614,7 @@ export default function Home() {
                   <div key={entry.slug} className="px-4 py-4 space-y-3">
                     <div className="flex items-start gap-3">
                       <img
-                        src={"/api/qr?slug=" + encodeURIComponent(entry.slug)}
+                        src={qrImgUrl(entry.slug, entry.qrIcon)}
                         alt={"QR " + entry.slug}
                         width={56}
                         height={56}
@@ -671,7 +718,7 @@ export default function Home() {
                 </button>
               </div>
               <img
-                src={"/api/qr?slug=" + encodeURIComponent(previewSlug)}
+                src={qrImgUrl(previewSlug, previewEntry?.qrIcon)}
                 alt={"QR " + previewSlug}
                 className="mx-auto"
                 width={256}

@@ -13,6 +13,7 @@ export interface RedirectEntry {
   targetUrl: string;
   name: string;
   note: string;
+  qrIcon: string;
 }
 
 interface RedirectDoc {
@@ -20,6 +21,7 @@ interface RedirectDoc {
   target_url: string;
   name?: string;
   note?: string;
+  qr_icon?: string;
 }
 
 export function isSafeRedirectUrl(url: string): boolean {
@@ -58,6 +60,7 @@ export async function getRedirects(): Promise<RedirectEntry[]> {
               target_url: 1,
               name: 1,
               note: 1,
+              qr_icon: 1,
             },
           }
         )
@@ -72,6 +75,7 @@ export async function getRedirects(): Promise<RedirectEntry[]> {
             targetUrl: String(row.target_url).trim(),
             name: String(row.name ?? "").slice(0, MAX_TEXT),
             note: String(row.note ?? "").slice(0, MAX_TEXT),
+            qrIcon: String(row.qr_icon ?? ""),
           });
         }
       }
@@ -92,7 +96,8 @@ export async function setRedirectTarget(
   slug: string,
   url: string,
   name: string,
-  note: string
+  note: string,
+  qrIcon?: string
 ): Promise<{ ok: boolean; error?: string }> {
   if (!isValidSlug(slug)) {
     return { ok: false, error: "Slug must be 1-10 characters, letters, numbers, hyphen, underscore only." };
@@ -116,6 +121,7 @@ export async function setRedirectTarget(
           target_url: trimmedUrl,
           name: (name ?? "").slice(0, MAX_TEXT),
           note: (note ?? "").slice(0, MAX_TEXT),
+          qr_icon: (qrIcon ?? "").slice(0, 30),
         },
       },
       { upsert: true }
