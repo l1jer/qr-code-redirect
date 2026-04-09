@@ -1,6 +1,7 @@
 /**
- * Social media icon registry for QR code centre overlays.
- * Brand icon paths come from simple-icons (latest package version).
+ * Icon registry for QR code centre overlays.
+ * Social media icon paths come from simple-icons; brand logos use file-based images
+ * stored in public/.
  */
 
 import {
@@ -18,6 +19,8 @@ export interface QrIconDef {
   label: string;
   color: string;
   svg?: string;
+  /** Public path for file-based icons (e.g. "/tsa-logo.png") */
+  file?: string;
 }
 
 function iconSvg(path: string, hex: string): string {
@@ -39,7 +42,11 @@ function instagramGradientSvg(path: string): string {
 }
 
 export const QR_ICONS: QrIconDef[] = [
-  { id: "logo", label: "Logo", color: "#2563eb" },
+  { id: "logo", label: "TSA", color: "#2563eb", file: "/tsa-logo.png" },
+  { id: "pulsar", label: "Pulsar", color: "#1e40af", file: "/pulsar-logo.svg" },
+  { id: "nt", label: "NT", color: "#374151", file: "/nt-logo.png" },
+  { id: "sw", label: "SW", color: "#374151", file: "/sw-logo.jpg" },
+  { id: "zt", label: "ZT", color: "#374151", file: "/zt-logo.png" },
   { id: "instagram", label: "Instagram", color: "#DD2A7B", svg: instagramGradientSvg(siInstagram.path) },
   { id: "facebook", label: "Facebook", color: `#${siFacebook.hex}`, svg: iconSvg(siFacebook.path, siFacebook.hex) },
   { id: "youtube", label: "YouTube", color: `#${siYoutube.hex}`, svg: iconSvg(siYoutube.path, siYoutube.hex) },

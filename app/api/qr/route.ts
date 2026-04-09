@@ -12,14 +12,15 @@ import { NextRequest, NextResponse } from "next/server";
 import * as path from "node:path";
 import * as fs from "node:fs";
 
-let logoCached: Buffer | null = null;
+const iconFileCache = new Map<string, Buffer>();
 
-function loadLogo(): Buffer | null {
-  if (logoCached) return logoCached;
-  const logoPath = path.join(process.cwd(), "public", "flywing-icon.png");
-  if (!fs.existsSync(logoPath)) return null;
-  logoCached = fs.readFileSync(logoPath);
-  return logoCached;
+function loadIconFile(filename: string): Buffer | null {
+  if (iconFileCache.has(filename)) return iconFileCache.get(filename)!;
+  const filePath = path.join(process.cwd(), "public", filename);
+  if (!fs.existsSync(filePath)) return null;
+  const buf = fs.readFileSync(filePath);
+  iconFileCache.set(filename, buf);
+  return buf;
 }
 
 async function svgToPng(svg: string, size: number): Promise<Buffer> {
@@ -43,9 +44,7 @@ export async function GET(request: NextRequest) {
 
   const iconParam = request.nextUrl.searchParams.get("icon")?.trim();
   const requestedIconId = iconParam || entry.qrIcon || "logo";
-  const iconId = requestedIconId === "none" || requestedIconId === "logo" || getQrIconDef(requestedIconId)
-    ? requestedIconId
-    : "logo";
+  const iconId = getQrIconDef(requestedIconId) ? requestedIconId : "logo";
 
   const origin = new URL(request.url).origin;
   const base = process.env.NEXT_PUBLIC_APP_URL || origin;
@@ -72,20 +71,19 @@ export async function GET(request: NextRequest) {
     const offset = Math.round((qrSize - bgSize) / 2);
 
     let iconPng: Buffer | null = null;
+    const def = getQrIconDef(iconId);
 
-    if (iconId === "logo") {
-      const logoRaw = loadLogo();
-      if (logoRaw) {
-        iconPng = await sharp(logoRaw)
+    if (def?.file) {
+      const filename = def.file.replace(/^\//, "");
+      const raw = loadIconFile(filename);
+      if (raw) {
+        iconPng = await sharp(raw)
           .resize(logoSize, logoSize, { fit: "contain", background: { r: 255, g: 255, b: 255, alpha: 1 } })
           .png()
           .toBuffer();
       }
-    } else {
-      const def = getQrIconDef(iconId);
-      if (def?.svg) {
-        iconPng = await svgToPng(def.svg, logoSize);
-      }
+    } else if (def?.svg) {
+      iconPng = await svgToPng(def.svg, logoSize);
     }
 
     if (!iconPng) {

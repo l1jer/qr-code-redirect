@@ -4,8 +4,9 @@
  */
 
 import { getIronSession, SessionOptions } from "iron-session";
+import { env } from "@/lib/env";
 
-const password = process.env.AUTH_SECRET ?? "";
+const password = env("AUTH_SECRET");
 const MIN_PASSWORD_LENGTH = 32;
 
 export interface SessionData {

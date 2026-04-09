@@ -1,26 +1,25 @@
 import { Db, MongoClient } from "mongodb";
+import { env } from "@/lib/env";
 
-function readEnv(name: string): string {
-  const customPrefix = (process.env.MONGODB_ENV_PREFIX ?? "").trim();
-  if (customPrefix) {
-    const value = process.env[`${customPrefix}_${name}`];
-    if (value && value.trim()) return value.trim();
-  }
+function readMongoEnv(name: string): string {
+  const value = env(name);
+  if (value) return value;
 
+  // Fallback: Vercel Mongo integration uses QRCG_ prefix
   if (name === "MONGODB_URI") {
     const qrcg = process.env.QRCG_MONGODB_URI;
-    if (qrcg && qrcg.trim()) return qrcg.trim();
+    if (qrcg?.trim()) return qrcg.trim();
   }
   if (name === "MONGODB_DB") {
     const qrcg = process.env.QRCG_MONGODB_DB;
-    if (qrcg && qrcg.trim()) return qrcg.trim();
+    if (qrcg?.trim()) return qrcg.trim();
   }
 
-  return (process.env[name] ?? "").trim();
+  return "";
 }
 
-const mongoUri = readEnv("MONGODB_URI");
-const mongoDbName = readEnv("MONGODB_DB");
+const mongoUri = readMongoEnv("MONGODB_URI");
+const mongoDbName = readMongoEnv("MONGODB_DB");
 
 declare global {
   // eslint-disable-next-line no-var

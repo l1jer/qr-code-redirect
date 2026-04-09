@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "QR Redirect",
+  title: "TSA OUTDOORS",
   description: "Manage redirect target and QR code",
   icons: { icon: "/favicon.ico" },
 };
@@ -24,7 +24,7 @@ export default function RootLayout({
       </head>
       <body
         className="antialiased"
-        style={{ fontFamily: "'Roboto', 'Alibaba PuHuiTi', system-ui, sans-serif" }}
+        style={{ fontFamily: "'Roboto', system-ui, sans-serif" }}
       >
         {children}
       </body>

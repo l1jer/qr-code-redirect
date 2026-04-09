@@ -89,7 +89,7 @@ export default function Home() {
         scanCounts: data.scanCounts && typeof data.scanCounts === "object" ? data.scanCounts : {},
       });
     } catch {
-      setError("Failed to load settings / 加载设置失败");
+      setError("Failed to load settings");
     }
   }, []);
 
@@ -113,13 +113,13 @@ export default function Home() {
       });
       const data = await res.json();
       if (!res.ok) {
-        setError(data.error ?? "Login failed / 登录失败");
+        setError(data.error ?? "Login failed");
         return;
       }
       setCode("");
       await fetchSession();
     } catch {
-      setError("Request failed / 请求失败");
+      setError("Request failed");
     } finally {
       setSaving(false);
     }
@@ -151,10 +151,10 @@ export default function Home() {
       });
       const data = await res.json();
       if (!res.ok) {
-        setError(data.error ?? "Save failed / 保存失败");
+        setError(data.error ?? "Save failed");
         return;
       }
-      setMessage("Link saved. / 链接已保存。");
+      setMessage("Link saved.");
       setNewSlug("");
       setNewUrl("");
       setNewName("");
@@ -163,7 +163,7 @@ export default function Home() {
       setEditingSlug(null);
       await fetchSettings();
     } catch {
-      setError("Request failed / 请求失败");
+      setError("Request failed");
     } finally {
       setSaving(false);
     }
@@ -171,7 +171,7 @@ export default function Home() {
 
   const handleDelete = async (slug: string) => {
     if (!settings?.canEdit) return;
-    if (!confirm("Delete this link? / 确定删除此链接?")) return;
+    if (!confirm("Delete this link?")) return;
     setError(null);
     try {
       const res = await fetch("/api/settings", {
@@ -181,12 +181,12 @@ export default function Home() {
       });
       if (!res.ok) {
         const data = await res.json();
-        setError(data.error ?? "Delete failed / 删除失败");
+        setError(data.error ?? "Delete failed");
         return;
       }
       await fetchSettings();
     } catch {
-      setError("Request failed / 请求失败");
+      setError("Request failed");
     }
   };
 
@@ -246,7 +246,7 @@ export default function Home() {
       a.click();
       URL.revokeObjectURL(url);
     } catch {
-      setError("Download failed / 下载失败");
+      setError("Download failed");
     }
   };
 
@@ -254,7 +254,7 @@ export default function Home() {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-stone-900">
-        <p className="text-stone-500">Loading... / 载入中...</p>
+        <p className="text-stone-500">Loading...</p>
       </div>
     );
   }
@@ -265,11 +265,11 @@ export default function Home() {
       <div className="min-h-screen flex items-center justify-center bg-stone-900 px-4">
         <div className="w-full max-w-sm bg-stone-800 rounded-xl shadow-lg border border-stone-700 p-6">
           <div className="flex justify-center mb-4">
-            <img src="/flywing-logo.jpg" alt="Logo" className="h-10 rounded" />
+            <img src="/tsa-logo.png" alt="TSA OUTDOORS" className="h-10 rounded" />
           </div>
-          <h1 className="text-xl font-semibold text-stone-100 mb-1">Sign in / 登录</h1>
+          <h1 className="text-xl font-semibold text-stone-100 mb-1">Sign in</h1>
           <p className="text-sm text-stone-400 mb-5">
-            Enter the 6-digit code from your authenticator app. / 输入验证器应用中的6位数字码。
+            Enter the 6-digit code from your authenticator app.
           </p>
           {error && (
             <div className="mb-4 rounded-lg bg-rose-900/40 border border-rose-800 px-4 py-3 text-sm text-rose-300">
@@ -278,7 +278,7 @@ export default function Home() {
           )}
           <form onSubmit={handleLogin}>
             <label htmlFor="code" className="block text-sm font-medium text-stone-400 mb-1">
-              Code / 验证码
+              Code
             </label>
             <input
               id="code"
@@ -298,7 +298,7 @@ export default function Home() {
               className="w-full rounded-lg bg-teal-600 px-4 py-2.5 text-sm font-medium text-white
                          hover:bg-teal-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
-              {saving ? "Verifying... / 验证中..." : "Sign in / 登录"}
+              {saving ? "Verifying..." : "Sign in"}
             </button>
           </form>
         </div>
@@ -316,18 +316,18 @@ export default function Home() {
       <div className="max-w-7xl mx-auto space-y-6">
         {/* Logo */}
         <div className="flex justify-center">
-          <img src="/flywing-logo.jpg" alt="Logo" className="h-12 rounded" />
+          <img src="/tsa-logo.png" alt="TSA OUTDOORS" className="h-12 rounded" />
         </div>
 
         {/* Header */}
         <div className="flex items-center justify-between">
-          <h1 className="text-xl font-semibold text-stone-100">QR Redirect / 二维码跳转</h1>
+          <h1 className="text-xl font-semibold text-stone-100">TSA OUTDOORS</h1>
           <button
             type="button"
             onClick={handleLogout}
             className="text-sm text-stone-400 hover:text-stone-200 transition-colors"
           >
-            Sign out / 登出
+            Sign out
           </button>
         </div>
 
@@ -347,16 +347,16 @@ export default function Home() {
         {canEdit && (
           <div className="bg-stone-800 rounded-xl shadow-lg border border-stone-700 p-5">
             <h2 className="text-sm font-semibold text-stone-100 mb-0.5">
-              {editingSlug ? `Editing / 编辑: ${editingSlug}` : "Add new link / 新增链接"}
+              {editingSlug ? `Editing: ${editingSlug}` : "Add new link"}
             </h2>
             <p className="text-xs text-stone-400 mb-4">
-              {editingSlug ? "Change the URL, name, or note below. / 修改下方的网址、名称或备注。" : "Create a new short link with its own QR code. / 创建新的短链接及其专属二维码。"}
+              {editingSlug ? "Change the URL, name, or note below." : "Create a new short link with its own QR code."}
             </p>
             <form onSubmit={handleAddLink} className="space-y-3">
               <div className="grid grid-cols-1 sm:grid-cols-[1fr_2fr] gap-3">
                 <div>
                   <label htmlFor="newSlug" className="block text-xs font-medium text-stone-400 mb-1">
-                    Slug / 短标识
+                    Slug
                   </label>
                   <input
                     id="newSlug"
@@ -373,7 +373,7 @@ export default function Home() {
                 </div>
                 <div>
                   <label htmlFor="newUrl" className="block text-xs font-medium text-stone-400 mb-1">
-                    Redirect URL / 跳转地址
+                    Redirect URL
                   </label>
                   <input
                     id="newUrl"
@@ -389,7 +389,7 @@ export default function Home() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label htmlFor="newName" className="block text-xs font-medium text-stone-400 mb-1">
-                    Name / 名称
+                    Name
                   </label>
                   <input
                     id="newName"
@@ -404,7 +404,7 @@ export default function Home() {
                 </div>
                 <div>
                   <label htmlFor="newNote" className="block text-xs font-medium text-stone-400 mb-1">
-                    Note / 备注
+                    Note
                   </label>
                   <input
                     id="newNote"
@@ -421,7 +421,7 @@ export default function Home() {
               {/* QR icon selector */}
               <div>
                 <label className="block text-xs font-medium text-stone-400 mb-1.5">
-                  QR Icon / 二维码图标
+                  QR Icon
                 </label>
                 <div className="flex flex-wrap gap-2">
                   {QR_ICONS.map((icon) => (
@@ -440,13 +440,13 @@ export default function Home() {
                           className="w-6 h-6 flex items-center justify-center"
                           dangerouslySetInnerHTML={{ __html: icon.svg }}
                         />
-                      ) : icon.id === "logo" ? (
-                        <img src="/flywing-icon.png" alt="Logo" className="w-6 h-6 rounded" />
+                      ) : icon.file ? (
+                        <img src={icon.file} alt={icon.label} className="w-6 h-6 rounded object-contain" />
                       ) : (
                         <span className="w-6 h-6 flex items-center justify-center text-stone-500 text-lg leading-none">&times;</span>
                       )}
                       <span className={`text-[10px] mt-1 leading-tight text-center whitespace-pre-line ${newQrIcon === icon.id ? "text-teal-300" : "text-stone-400"}`}>
-                        {icon.id === "wechat" ? "WeChat\n微信" : icon.label}
+                        {icon.label}
                       </span>
                     </button>
                   ))}
@@ -459,7 +459,7 @@ export default function Home() {
                   className="rounded-lg bg-stone-600 px-5 py-2 text-sm font-medium text-white
                              hover:bg-stone-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 >
-                  {saving ? "Saving... / 保存中..." : editingSlug ? "Update / 更新" : "Add / 添加"}
+                  {saving ? "Saving..." : editingSlug ? "Update" : "Add"}
                 </button>
                 <button
                   type="button"
@@ -467,7 +467,7 @@ export default function Home() {
                   className="rounded-lg bg-stone-700 px-5 py-2 text-sm font-medium text-stone-300
                              hover:bg-stone-600 transition-colors"
                 >
-                  {editingSlug ? "Cancel / 取消" : "Clear / 清除"}
+                  {editingSlug ? "Cancel" : "Clear"}
                 </button>
               </div>
             </form>
@@ -476,22 +476,22 @@ export default function Home() {
 
         {!canEdit && (
           <div className="rounded-lg bg-sky-900/30 border border-sky-800 px-4 py-3 text-sm text-sky-300">
-            Add MongoDB to create or edit links from the UI. / 请接入 MongoDB 以在界面中创建或编辑链接。
+            Add MongoDB to create or edit links from the UI.
           </div>
         )}
 
         {/* Links table */}
         <div className="bg-stone-800 rounded-xl shadow-lg border border-stone-700 overflow-hidden">
           <div className="px-5 py-4 border-b border-stone-700">
-            <h2 className="text-sm font-semibold text-stone-100">Links / 链接列表</h2>
+            <h2 className="text-sm font-semibold text-stone-100">Links</h2>
             <p className="text-xs text-stone-400 mt-0.5">
-              Each link has a short path. Scan the QR or open the full URL to redirect. / 每个链接对应一个短路径，扫码或打开完整URL即可跳转。
+              Each link has a short path. Scan the QR or open the full URL to redirect.
             </p>
           </div>
 
           {entries.length === 0 ? (
             <div className="px-5 py-8 text-center text-sm text-stone-500">
-              No links yet. / 暂无链接。{canEdit ? " Add one above. / 请在上方添加。" : " Connect MongoDB to get started. / 请接入 MongoDB 开始使用。"}
+              No links yet.{canEdit ? " Add one above." : " Connect MongoDB to get started."}
             </div>
           ) : (
             <>
@@ -500,14 +500,14 @@ export default function Home() {
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="bg-stone-750 text-left text-xs font-medium text-stone-400 uppercase tracking-wider" style={{ backgroundColor: "rgb(41 37 36)" }}>
-                      <th className="px-3 py-3">QR / 二维码</th>
-                      <th className="px-3 py-3">Slug / 标识</th>
-                      <th className="px-5 py-3">Name / 名称</th>
-                      <th className="px-5 py-3">Full URL / 完整地址</th>
-                      <th className="px-5 py-3">Redirects to / 跳转至</th>
-                      <th className="px-5 py-3">Note / 备注</th>
-                      <th className="px-3 py-3 text-right">Usage / 使用次数</th>
-                      <th className="px-3 py-3 text-right">Actions / 操作</th>
+                      <th className="px-3 py-3">QR</th>
+                      <th className="px-3 py-3">Slug</th>
+                      <th className="px-5 py-3">Name</th>
+                      <th className="px-5 py-3">Full URL</th>
+                      <th className="px-5 py-3">Redirects to</th>
+                      <th className="px-5 py-3">Note</th>
+                      <th className="px-3 py-3 text-right">Usage</th>
+                      <th className="px-3 py-3 text-right">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-stone-700">
@@ -558,7 +558,7 @@ export default function Home() {
                             type="button"
                             onClick={() => openPreview(entry.slug)}
                             className="tabular-nums text-teal-400 hover:text-teal-300 hover:underline cursor-pointer text-xs"
-                            title="View scan details / 查看扫描详情"
+                            title="View scan details"
                           >
                             {settings?.scanCounts?.[entry.slug] ?? 0}
                           </button>
@@ -569,7 +569,7 @@ export default function Home() {
                               type="button"
                               onClick={() => openPreview(entry.slug)}
                               className="p-1.5 rounded-md text-teal-400 hover:text-teal-300 hover:bg-teal-900/40 transition-colors"
-                              title="Stats / 统计"
+                              title="Stats"
                             >
                               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
                                 <path d="M15.5 2A1.5 1.5 0 0 0 14 3.5v13a1.5 1.5 0 0 0 1.5 1.5h1a1.5 1.5 0 0 0 1.5-1.5v-13A1.5 1.5 0 0 0 16.5 2h-1ZM9.5 6A1.5 1.5 0 0 0 8 7.5v9A1.5 1.5 0 0 0 9.5 18h1a1.5 1.5 0 0 0 1.5-1.5v-9A1.5 1.5 0 0 0 10.5 6h-1ZM3.5 10A1.5 1.5 0 0 0 2 11.5v5A1.5 1.5 0 0 0 3.5 18h1A1.5 1.5 0 0 0 6 16.5v-5A1.5 1.5 0 0 0 4.5 10h-1Z" />
@@ -580,7 +580,7 @@ export default function Home() {
                                 type="button"
                                 onClick={() => handleEdit(entry)}
                                 className="p-1.5 rounded-md text-amber-400 hover:text-amber-300 hover:bg-amber-900/40 transition-colors"
-                                title="Edit / 编辑"
+                                title="Edit"
                               >
                                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
                                   <path d="m5.433 13.917 1.262-3.155A4 4 0 0 1 7.58 9.42l6.92-6.918a2.121 2.121 0 0 1 3 3l-6.92 6.918c-.383.383-.84.685-1.343.886l-3.154 1.262a.5.5 0 0 1-.65-.65Z" />
@@ -593,7 +593,7 @@ export default function Home() {
                                 type="button"
                                 onClick={() => handleDelete(entry.slug)}
                                 className="p-1.5 rounded-md text-red-400 hover:text-red-300 hover:bg-red-900/40 transition-colors"
-                                title="Delete / 删除"
+                                title="Delete"
                               >
                                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
                                   <path fillRule="evenodd" d="M8.75 1A2.75 2.75 0 0 0 6 3.75v.443c-.795.077-1.584.176-2.365.298a.75.75 0 1 0 .23 1.482l.149-.022.841 10.518A2.75 2.75 0 0 0 7.596 19h4.807a2.75 2.75 0 0 0 2.742-2.53l.841-10.519.149.023a.75.75 0 0 0 .23-1.482A41.03 41.03 0 0 0 14 4.193V3.75A2.75 2.75 0 0 0 11.25 1h-2.5ZM10 4c.84 0 1.673.025 2.5.075V3.75c0-.69-.56-1.25-1.25-1.25h-2.5c-.69 0-1.25.56-1.25 1.25v.325C8.327 4.025 9.16 4 10 4ZM8.58 7.72a.75.75 0 0 1 .7.798l-.35 5.5a.75.75 0 0 1-1.497-.095l.35-5.5a.75.75 0 0 1 .797-.703Zm2.84 0a.75.75 0 0 1 .798.703l.35 5.5a.75.75 0 0 1-1.498.095l-.35-5.5a.75.75 0 0 1 .7-.798Z" clipRule="evenodd" />
@@ -643,7 +643,7 @@ export default function Home() {
                             onClick={() => openPreview(entry.slug)}
                             className="text-xs text-teal-400 hover:underline tabular-nums"
                           >
-                            {settings?.scanCounts?.[entry.slug] ?? 0} scans / 次扫描
+                            {settings?.scanCounts?.[entry.slug] ?? 0} scans
                           </button>
                           {entry.note && (
                             <span className="text-[11px] text-stone-500 truncate">{entry.note}</span>
@@ -656,7 +656,7 @@ export default function Home() {
                         type="button"
                         onClick={() => openPreview(entry.slug)}
                         className="p-2 rounded-md text-teal-400 hover:text-teal-300 hover:bg-teal-900/40 transition-colors"
-                        title="Stats / 统计"
+                        title="Stats"
                       >
                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4.5 h-4.5">
                           <path d="M15.5 2A1.5 1.5 0 0 0 14 3.5v13a1.5 1.5 0 0 0 1.5 1.5h1a1.5 1.5 0 0 0 1.5-1.5v-13A1.5 1.5 0 0 0 16.5 2h-1ZM9.5 6A1.5 1.5 0 0 0 8 7.5v9A1.5 1.5 0 0 0 9.5 18h1a1.5 1.5 0 0 0 1.5-1.5v-9A1.5 1.5 0 0 0 10.5 6h-1ZM3.5 10A1.5 1.5 0 0 0 2 11.5v5A1.5 1.5 0 0 0 3.5 18h1A1.5 1.5 0 0 0 6 16.5v-5A1.5 1.5 0 0 0 4.5 10h-1Z" />
@@ -667,7 +667,7 @@ export default function Home() {
                           type="button"
                           onClick={() => handleEdit(entry)}
                           className="p-2 rounded-md text-amber-400 hover:text-amber-300 hover:bg-amber-900/40 transition-colors"
-                          title="Edit / 编辑"
+                          title="Edit"
                         >
                           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4.5 h-4.5">
                             <path d="m5.433 13.917 1.262-3.155A4 4 0 0 1 7.58 9.42l6.92-6.918a2.121 2.121 0 0 1 3 3l-6.92 6.918c-.383.383-.84.685-1.343.886l-3.154 1.262a.5.5 0 0 1-.65-.65Z" />
@@ -680,7 +680,7 @@ export default function Home() {
                           type="button"
                           onClick={() => handleDelete(entry.slug)}
                           className="p-2 rounded-md text-red-400 hover:text-red-300 hover:bg-red-900/40 transition-colors"
-                          title="Delete / 删除"
+                          title="Delete"
                         >
                           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4.5 h-4.5">
                             <path fillRule="evenodd" d="M8.75 1A2.75 2.75 0 0 0 6 3.75v.443c-.795.077-1.584.176-2.365.298a.75.75 0 1 0 .23 1.482l.149-.022.841 10.518A2.75 2.75 0 0 0 7.596 19h4.807a2.75 2.75 0 0 0 2.742-2.53l.841-10.519.149.023a.75.75 0 0 0 .23-1.482A41.03 41.03 0 0 0 14 4.193V3.75A2.75 2.75 0 0 0 11.25 1h-2.5ZM10 4c.84 0 1.673.025 2.5.075V3.75c0-.69-.56-1.25-1.25-1.25h-2.5c-.69 0-1.25.56-1.25 1.25v.325C8.327 4.025 9.16 4 10 4ZM8.58 7.72a.75.75 0 0 1 .7.798l-.35 5.5a.75.75 0 0 1-1.497-.095l.35-5.5a.75.75 0 0 1 .797-.703Zm2.84 0a.75.75 0 0 1 .798.703l.35 5.5a.75.75 0 0 1-1.498.095l-.35-5.5a.75.75 0 0 1 .7-.798Z" clipRule="evenodd" />
@@ -733,25 +733,25 @@ export default function Home() {
                 className="w-full rounded-lg bg-teal-600 px-4 py-2.5 text-sm font-medium text-white
                            hover:bg-teal-500 transition-colors"
               >
-                Download PNG / 下载图片
+                Download PNG
               </button>
 
               {/* Scan analytics */}
               <div className="border-t border-stone-700 pt-4 space-y-4">
                 <h4 className="text-xs font-semibold text-stone-400 uppercase tracking-wider">
-                  Scan analytics / 扫描统计
+                  Scan analytics
                 </h4>
                 {loadingStats ? (
-                  <p className="text-xs text-stone-500">Loading stats... / 加载统计数据...</p>
+                  <p className="text-xs text-stone-500">Loading stats...</p>
                 ) : slugStats ? (
                   <>
                     {/* Counters */}
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center">
                       {[
-                        { label: "Total / 总计", value: slugStats.totalScans },
-                        { label: "24h / 今日", value: slugStats.last24h },
-                        { label: "7 days / 7天", value: slugStats.last7d },
-                        { label: "30 days / 30天", value: slugStats.last30d },
+                        { label: "Total", value: slugStats.totalScans },
+                        { label: "24h", value: slugStats.last24h },
+                        { label: "7 days", value: slugStats.last7d },
+                        { label: "30 days", value: slugStats.last30d },
                       ].map((s) => (
                         <div key={s.label} className="bg-stone-700 rounded-lg p-2">
                           <div className="text-lg font-semibold text-stone-100 tabular-nums">{s.value}</div>
@@ -762,7 +762,7 @@ export default function Home() {
 
                     {/* Unique visitors */}
                     <div className="flex items-center justify-between text-xs px-1">
-                      <span className="text-stone-400">Unique visitors (30d) / 独立访客 (30天)</span>
+                      <span className="text-stone-400">Unique visitors (30d)</span>
                       <span className="font-medium text-stone-100 tabular-nums">{slugStats.uniqueIPs}</span>
                     </div>
 
@@ -772,7 +772,7 @@ export default function Home() {
                       return (
                         <div>
                           <p className="text-[10px] text-stone-400 uppercase tracking-wider mb-2">
-                            Daily scans (last 30 days) / 每日扫描 (近30天)
+                            Daily scans (last 30 days)
                           </p>
                           <div className="flex items-end gap-[2px] h-16">
                             {slugStats.dailyTrend.map((d) => (
@@ -796,7 +796,7 @@ export default function Home() {
                     {slugStats.topCountries.length > 0 && (
                       <div>
                         <p className="text-[10px] text-stone-400 uppercase tracking-wider mb-1.5">
-                          Top countries (30d) / 热门国家 (30天)
+                          Top countries (30d)
                         </p>
                         <div className="space-y-1">
                           {slugStats.topCountries.map((c) => (
@@ -821,7 +821,7 @@ export default function Home() {
                     {slugStats.topDevices.length > 0 && (
                       <div>
                         <p className="text-[10px] text-stone-400 uppercase tracking-wider mb-1.5">
-                          Devices (30d) / 设备分布 (30天)
+                          Devices (30d)
                         </p>
                         <div className="flex flex-wrap gap-2">
                           {slugStats.topDevices.map((d) => (
@@ -838,7 +838,7 @@ export default function Home() {
                     {slugStats.topReferers.length > 0 && (
                       <div>
                         <p className="text-[10px] text-stone-400 uppercase tracking-wider mb-1.5">
-                          Top referers (30d) / 热门来源 (30天)
+                          Top referers (30d)
                         </p>
                         <div className="space-y-1">
                           {slugStats.topReferers.map((r) => (
@@ -855,7 +855,7 @@ export default function Home() {
                     {slugStats.recentScans.length > 0 && (
                       <div>
                         <p className="text-[10px] text-stone-400 uppercase tracking-wider mb-1.5">
-                          Recent scans / 最近扫描记录
+                          Recent scans
                         </p>
                         <div className="max-h-52 overflow-y-auto border border-stone-700 rounded-lg divide-y divide-stone-700">
                           {slugStats.recentScans.map((scan, i) => (
@@ -892,7 +892,7 @@ export default function Home() {
                     )}
                   </>
                 ) : (
-                  <p className="text-xs text-stone-400">Analytics unavailable. / 暂无统计数据。</p>
+                  <p className="text-xs text-stone-400">Analytics unavailable.</p>
                 )}
               </div>
             </div>

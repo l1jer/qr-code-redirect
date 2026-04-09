@@ -4,8 +4,9 @@
  */
 
 import { verify } from "otplib";
+import { env } from "@/lib/env";
 
-const TOTP_SECRET = process.env.TOTP_SECRET ?? "";
+const TOTP_SECRET = env("TOTP_SECRET");
 
 export function isTotpConfigured(): boolean {
   return TOTP_SECRET.length >= 16;
